@@ -7,6 +7,7 @@ import java.util.ListIterator;
 
 import Shared.Const;
 import Shared.KeyMessageData;
+import Shared.MsgData;
 import Shared.Vector2D;
 
 public class sEntityManager {
@@ -53,6 +54,16 @@ public class sEntityManager {
     		}
     	}
     }
+    public MsgData[] getData() {
+		MsgData[] datalist = new MsgData[5]; 
+		int i = 0;
+		for (ListIterator<sGameEntity> itr = m_entities.listIterator(0); itr.hasNext();){
+    		sGameEntity e = itr.next();
+			datalist[i] = e.getData();
+			i++;
+		}
+		return datalist;
+	}
     public void checkBorderCollisions(int screenWidth, int screenHeight) {
 		double newX = 0.0, newY = 0.0, radius = 0;
 		boolean reset = false;

@@ -48,6 +48,7 @@ public class sShip extends sGameEntity{
 			setAcceleration(0);
 		}
 	}
+	@Override
 	public int getID(){
 		return m_identifier;
 	}
@@ -57,6 +58,11 @@ public class sShip extends sGameEntity{
 		m_forward = keyState.forwardKey;
 		m_left = keyState.leftKey;
 		m_right = keyState.rightKey;
+	}
+	@Override
+	public KeyMessageData getKeyState(){
+		KeyMessageData data = new KeyMessageData(m_forward,m_right,m_left,m_braking);
+		return data;
 	}
 
 

@@ -1,13 +1,17 @@
 package GBallClient;
 
 import java.awt.event.*;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.net.SocketException;
+import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.util.Hashtable;
 
@@ -57,9 +61,11 @@ public class cWorld {
     public void process() {
     	try {
 			m_socket = new DatagramSocket();
+			m_socket.setSoTimeout(200);
     	} catch (IOException e) {
-			// TODO Auto-generated catch block
+			System.err.println("Error while setting socket timeout");
 			e.printStackTrace();
+			System.exit(-1);
 		}
     	
     	
@@ -95,45 +101,11 @@ public class cWorld {
     	System.out.println("Sending handshake");
     	int id = -1;
     	
-    	//TODO Make handshake resistant to packet loss
+    	// Handshake
     	
-    	
-    	byte[] buf = new byte[256];
-    	buf = "handshake".getBytes();
-    	
-		DatagramPacket p = new DatagramPacket(buf, buf.length, m_serverAddress, SERVERPORT);
-		
-		try {
-			m_socket.send(p);
-		} catch (IOException e) {
-			System.err.println("Error: IOException while sending handshake");
-			e.printStackTrace();
-			System.exit(-1);
-		}
-		
-		byte[] rBuf = new byte[256];
-		
-		DatagramPacket received = new DatagramPacket(rBuf, rBuf.length);
-		
-		System.out.println("Waiting for response");
-		try {
-			m_socket.receive(received);
-		} catch (IOException e) {
-			System.err.println("Error: IOException while recieving handshake response");
-			e.printStackTrace();
-			System.exit(-1);
-		}
-				
-		String msg = new String(received.getData());
-		String split[] = msg.trim().split(" ");
-		
-		System.out.println("Received: " + msg);
-		if (split[0].equals("handshake"))
-			id = Integer.parseInt(split[1]);
-		
+    	id = sendMessage("handshake");
 		
 	
-		m_serverListener = new ServerListener(m_serverAddress, SERVERPORT);
     	
     	
     	//Ship creating	
@@ -212,12 +184,66 @@ public class cWorld {
 		// Ball
 		cEntityManager.getInstance().addBall(new Vector2D(Const.BALL_X, Const.BALL_Y), new Vector2D(0.0, 0.0));
 		
-		//TODO Stop here until told to start
-		
-		//m_socket.recieve
+		// Send ready, this will pause until all players are started
+		sendMessage("start");
+		try {
+			this.wait(2000L); //TODO Fix Illegal Monitor exception?
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+
+		m_serverListener = new ServerListener(m_serverAddress, SERVERPORT);
 		
     }
-
+    private int sendMessage(String message){
+    	boolean acknowledged = false;
+    	
+    	
+    	
+    	while (!acknowledged){
+    		byte[] buf = new byte[16];
+        	buf = message.getBytes();
+        	
+    		DatagramPacket p = new DatagramPacket(buf, buf.length, m_serverAddress, SERVERPORT);
+    		
+    		try {
+    			m_socket.send(p);
+    		} catch (IOException e) {
+    			System.err.println("Error: IOException while sending message: " + message);
+    			e.printStackTrace();
+    			System.exit(-1);
+    		}
+    		
+    		byte[] rdBuf = new byte[16];
+    		DatagramPacket t = new DatagramPacket(rdBuf, rdBuf.length);
+    		
+    		System.out.println("Waiting for response");
+    		try {
+    			m_socket.receive(t);
+    		} catch (SocketTimeoutException e){
+    			continue;
+    		} catch (IOException e) {
+    			System.err.println("Error: IOException while recieving response");
+    			e.printStackTrace();
+    			System.exit(-1);
+    		}
+    				
+    		String rmsg = new String(t.getData());
+    		String rsplit[] = rmsg.trim().split(" ");
+    		
+    		System.out.println("Received: " + rmsg);
+    		
+    		if (rmsg.startsWith(message)){
+    			acknowledged = true;
+    			if (rsplit[0].equals("handshake")){
+    				return Integer.parseInt(rsplit[1]);
+    			}
+    		}
+    			
+    	}
+    	System.out.print("No ID received");
+    	return -1;
+    }
 	public double getActualFps() {
 		
 		return m_actualFps;
@@ -235,6 +261,14 @@ public class cWorld {
 		public ServerListener(InetAddress IP, int port) {
 			m_IP = IP;
 			m_port = port;
+			
+			try {
+				m_socket.setSoTimeout(0);
+			} catch (SocketException e) {
+				System.err.println("Error when disabling socket timeout");
+				e.printStackTrace();
+				System.exit(-1);
+			}
 
 			this.start();
 		}
@@ -254,28 +288,42 @@ public class cWorld {
 				} catch (IOException e) {
 					System.out.println("Error: IOException on recieving packet");
 					e.printStackTrace();
+					System.exit(-1);
 				}
 				
+				data = Deserialize(p.getData());
 				
-				
-				switch(data.m_ID)
-				{
-				case(0):
-					//TODO Update this ship with Deserialize(p.getData())
-					break;
-				case(1):
-					break;
-				case(2):
-					break;
-				case(3):
-					break;
-				default:
-					break;
-				}
-								
+				cEntityManager.getInstance().updateShipData(data);
+			
 				
 			}while (true);
 			
+		}
+		
+		private MsgData Deserialize(byte[] byt) {
+			MsgData r = null;
+
+			ByteArrayInputStream BaIs /* hehe */ = new ByteArrayInputStream(byt);
+			ObjectInputStream ois = null;
+
+			try {
+				ois = new ObjectInputStream(BaIs);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+
+			try {
+				r = (MsgData) ois.readObject();
+			} catch (ClassNotFoundException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+
+			return r;
 		}
     }
 }

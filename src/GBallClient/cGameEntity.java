@@ -99,6 +99,10 @@ public abstract class cGameEntity implements Serializable{
     public Vector2D getPosition() {
 	return m_position;
     }
+    
+    public void setPosition(double x, double y) {
+	m_position.set(x, y);
+    }
 
     public Vector2D getSpeed() {
 	return m_speed;
@@ -114,10 +118,6 @@ public abstract class cGameEntity implements Serializable{
     
     public void setDirection(Vector2D direction) {
     	m_direction.set(direction.getX(), direction.getY());
-    }
-
-    public void setPosition(double x, double y) {
-	m_position.set(x, y);
     }
 
     public void displace(final Vector2D displacement) {

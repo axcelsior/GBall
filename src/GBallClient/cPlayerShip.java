@@ -19,12 +19,14 @@ public class cPlayerShip extends cGameEntity implements KeyListener {
 								// rotating counterclockwise
 	private boolean braking = false;
 	private KeyMessageData m_keystates = new KeyMessageData();
+	private int m_identifier;
 
 	public cPlayerShip(final Vector2D position, final Vector2D speed, final Vector2D direction, final Color col,
 			final cKeyConfig kc, final int ID) {
 		super(position, speed, direction, Const.SHIP_MAX_ACCELERATION, Const.SHIP_MAX_SPEED, Const.SHIP_FRICTION);
 		m_color = col;
 		m_keyConfig = kc;
+		m_identifier = ID;
 		cWorld.getInstance().addKeyListener(this);
 	}
 
@@ -111,5 +113,9 @@ public class cPlayerShip extends cGameEntity implements KeyListener {
 	@Override
 	public double getRadius() {
 		return Const.SHIP_RADIUS;
+	}
+	
+	public int getID(){
+		return m_identifier;
 	}
 }
