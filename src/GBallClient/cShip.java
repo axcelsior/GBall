@@ -20,43 +20,36 @@ public class cShip extends cGameEntity{
 	boolean m_left;
 	boolean m_right;
 	
-	private int m_identifier;
-
 	public cShip(final Vector2D position, final Vector2D speed, final Vector2D direction, final Color col,int ID) {
 		super(position, speed, direction, Const.SHIP_MAX_ACCELERATION, Const.SHIP_MAX_SPEED, Const.SHIP_FRICTION);
 		m_color = col;
-		m_identifier = ID;
+		m_ID = ID;
 	}
 
 	public void updateKeys() {
+		int tmpRotation = 0;
+		
 		if (m_right) {
-			rotation = 1;
+			tmpRotation += 1;
 		}
 		if (m_left) {
-			rotation = -1;
+			tmpRotation -= 1;
 		}
 		if (m_forward) {
 			setAcceleration(Const.SHIP_MAX_ACCELERATION);
 		}
-		if (!m_right) {
-			rotation = 0;
-		}
-		if (!m_left) {
-			rotation = 0;
-		}
+
 		if (!m_forward) {
 			setAcceleration(0);
 		}
+		
+		rotation = tmpRotation;
 	}
 	
 	public void correctPosition(Vector2D position, Vector2D speed, Vector2D direction) {
 		setPosition(position.getX(), position.getY());
 		setSpeed(speed);
 		
-	}
-	
-	public int getID(){
-		return m_identifier;
 	}
 
 	public void setKeys(KeyMessageData keyState) {

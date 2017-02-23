@@ -4,6 +4,7 @@ import java.awt.*;
 import java.awt.event.*;
 
 import Shared.Const;
+import Shared.ScoreKeeper;
 
 public class cGameWindow extends Frame implements WindowListener {
     
@@ -36,7 +37,7 @@ public class cGameWindow extends Frame implements WindowListener {
 	offScreenGraphicsCtx.setColor(Const.BG_COLOR);
 	offScreenGraphicsCtx.fillRect(0,0,getSize().width,getSize().height);	
 	cEntityManager.getInstance().renderAll(offScreenGraphicsCtx);
-	cScoreKeeper.getInstance().render(offScreenGraphicsCtx);
+	ScoreKeeper.getInstance().render(offScreenGraphicsCtx);
 
 	if(Const.SHOW_FPS) {
 	    offScreenGraphicsCtx.drawString("FPS: " + (int) cWorld.getInstance().getActualFps(), 10, 50);

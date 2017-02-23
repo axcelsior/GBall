@@ -8,10 +8,12 @@ import Shared.Vector2D;
 
 public class cBall extends cGameEntity {
     private Color m_color;
+    
 
     public cBall(final Vector2D position, final Vector2D speed) {
 	super(position, speed, new Vector2D(0, 0), Const.BALL_MAX_ACCELERATION, Const.BALL_MAX_SPEED, Const.BALL_FRICTION);
 	m_color = Const.BALL_COLOR;
+	m_ID = 5;
     }
 
     @Override

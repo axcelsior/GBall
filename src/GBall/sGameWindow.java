@@ -4,6 +4,7 @@ import java.awt.*;
 import java.awt.event.*;
 
 import Shared.Const;
+import Shared.ScoreKeeper;
 
 public class sGameWindow extends Frame implements WindowListener {
     
@@ -22,7 +23,7 @@ public class sGameWindow extends Frame implements WindowListener {
         addWindowListener(this);
         	
         setSize(Const.DISPLAY_WIDTH, Const.DISPLAY_HEIGHT);
-        setTitle(Const.APP_NAME);
+        setTitle("Server");
         setVisible(true);
     }
 

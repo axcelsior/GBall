@@ -1,15 +1,13 @@
-package GBallClient;
+package Shared;
 
 import java.awt.Graphics;
 
-import Shared.Const;
-
-public class cScoreKeeper {
+public class ScoreKeeper {
     private static class ScoreKeeperSingletonHolder { 
-        public static final cScoreKeeper instance = new cScoreKeeper();
+        public static final ScoreKeeper instance = new ScoreKeeper();
     }
 
-    public static cScoreKeeper getInstance() {
+    public static ScoreKeeper getInstance() {
         return ScoreKeeperSingletonHolder.instance;
     }
 
@@ -20,8 +18,21 @@ public class cScoreKeeper {
 		m_team1Score += deltaTeam1;
 		m_team2Score += deltaTeam2;
     }
+    
+    public void setScores(int team1, int team2) {
+    	m_team1Score = team1;
+    	m_team2Score = team2;
+    }
+    
+    public int getScore1() {
+    	return m_team1Score;
+    }
+    
+    public int getScore2() {
+    	return m_team2Score;
+    }
 
-    private cScoreKeeper() {
+    private ScoreKeeper() {
 		m_team1Score = 0;
 		m_team2Score = 0;
     }

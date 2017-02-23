@@ -19,14 +19,13 @@ public class cPlayerShip extends cGameEntity implements KeyListener {
 								// rotating counterclockwise
 	private boolean braking = false;
 	private KeyMessageData m_keystates = new KeyMessageData();
-	private int m_identifier;
 
 	public cPlayerShip(final Vector2D position, final Vector2D speed, final Vector2D direction, final Color col,
 			final cKeyConfig kc, final int ID) {
 		super(position, speed, direction, Const.SHIP_MAX_ACCELERATION, Const.SHIP_MAX_SPEED, Const.SHIP_FRICTION);
 		m_color = col;
 		m_keyConfig = kc;
-		m_identifier = ID;
+		m_ID = ID;
 		cWorld.getInstance().addKeyListener(this);
 	}
 
@@ -36,11 +35,11 @@ public class cPlayerShip extends cGameEntity implements KeyListener {
 			if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
 				System.exit(0);
 			} else if (e.getKeyCode() == m_keyConfig.rightKey()) {
-				rotation = 1;
 				m_keystates.rightKey = true;
+				updateRotation();
 			} else if (e.getKeyCode() == m_keyConfig.leftKey()) {
-				rotation = -1;
 				m_keystates.leftKey = true;
+				updateRotation();
 			} else if (e.getKeyCode() == m_keyConfig.accelerateKey()) {
 				setAcceleration(Const.SHIP_MAX_ACCELERATION);
 				m_keystates.forwardKey = true;
@@ -55,12 +54,12 @@ public class cPlayerShip extends cGameEntity implements KeyListener {
 
 	public void keyReleased(KeyEvent e) {
 		try {
-			if (e.getKeyCode() == m_keyConfig.rightKey() && rotation == 1) {
-				rotation = 0;
+			if (e.getKeyCode() == m_keyConfig.rightKey()) {
 				m_keystates.rightKey = false;
-			} else if (e.getKeyCode() == m_keyConfig.leftKey() && rotation == -1) {
-				rotation = 0;
+				updateRotation();
+			} else if (e.getKeyCode() == m_keyConfig.leftKey()) {
 				m_keystates.leftKey = false;
+				updateRotation();
 			} else if (e.getKeyCode() == m_keyConfig.accelerateKey()) {
 				setAcceleration(0);
 				m_keystates.forwardKey = false;
@@ -72,6 +71,20 @@ public class cPlayerShip extends cGameEntity implements KeyListener {
 			System.out.println(x);
 		}
 	}
+	
+	public void updateRotation() {
+		int tmpRotation = 0;
+		
+		if (m_keystates.rightKey) {
+			tmpRotation += 1;
+		}
+		if (m_keystates.leftKey) {
+			tmpRotation -= 1;
+		}
+		
+		rotation = tmpRotation;
+	}
+
 
 	public KeyMessageData getKeyState() {
 		return m_keystates;
@@ -113,9 +126,5 @@ public class cPlayerShip extends cGameEntity implements KeyListener {
 	@Override
 	public double getRadius() {
 		return Const.SHIP_RADIUS;
-	}
-	
-	public int getID(){
-		return m_identifier;
 	}
 }

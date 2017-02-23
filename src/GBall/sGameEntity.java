@@ -6,6 +6,7 @@ import java.util.ListIterator;
 import GBallClient.cGameEntity;
 import Shared.KeyMessageData;
 import Shared.MsgData;
+import Shared.ScoreKeeper;
 import Shared.Vector2D;
 
 public abstract class sGameEntity implements Serializable {
@@ -26,7 +27,7 @@ public abstract class sGameEntity implements Serializable {
 	private double m_maxAcceleration;
 	private double m_maxSpeed;
 	private double m_friction;
-	private int m_ID;
+	protected int m_ID = -1;
 	
 	public abstract void render(java.awt.Graphics g);
 
@@ -59,7 +60,7 @@ public abstract class sGameEntity implements Serializable {
 	}
 	
 	public MsgData getData(){
-		MsgData data = new MsgData(getPosition(),getSpeed(),getDirection(),getKeyState(),getID());
+		MsgData data = new MsgData(getPosition(),getSpeed(),getDirection(),getKeyState(),getID(), ScoreKeeper.getInstance().getScore1(), ScoreKeeper.getInstance().getScore2());
 		return data;
 	}
 	public KeyMessageData getKeyState(){

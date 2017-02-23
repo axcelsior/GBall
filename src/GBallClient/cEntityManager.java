@@ -10,6 +10,7 @@ import GBall.sShip;
 import Shared.Const;
 import Shared.KeyMessageData;
 import Shared.MsgData;
+import Shared.ScoreKeeper;
 import Shared.Vector2D;
 
 public class cEntityManager {
@@ -74,7 +75,7 @@ public class cEntityManager {
 				}
 
 			} else if (e instanceof cBall) {
-				if (data.m_ID == 4){
+				if (data.m_ID == e.getID()) {
 					((cBall) e).setSpeed(data.m_speed);
 					((cBall) e).setDirection(data.m_direction);
 					((cBall) e).setPosition(data.m_position.getX(), data.m_position.getY());
@@ -82,6 +83,16 @@ public class cEntityManager {
 				}
 			}
 		}
+	}
+
+	public KeyMessageData getPlayerState() {
+		for (ListIterator<cGameEntity> itr = m_entities.listIterator(0); itr.hasNext();) {
+			cGameEntity e = itr.next();
+			if (e instanceof cPlayerShip) {
+				return ((cPlayerShip) e).getKeyState();
+			}
+		}
+		return new KeyMessageData();
 	}
 
 	public void checkBorderCollisions(int screenWidth, int screenHeight) {
@@ -96,17 +107,9 @@ public class cEntityManager {
 			if (newX + radius > (screenWidth - Const.WINDOW_BORDER_WIDTH)) {
 				newX = screenWidth - radius - Const.WINDOW_BORDER_WIDTH;
 				e.deflectX();
-				if (e.givesPoints()) {
-					cScoreKeeper.getInstance().changeScores(1, 0);
-					reset = true;
-				}
 			} else if ((newX - e.getRadius()) < Const.WINDOW_BORDER_WIDTH) {
 				newX = radius + Const.WINDOW_BORDER_WIDTH;
 				e.deflectX();
-				if (e.givesPoints()) {
-					cScoreKeeper.getInstance().changeScores(0, 1);
-					reset = true;
-				}
 			}
 
 			if (newY + radius > (screenHeight - Const.WINDOW_BOTTOM_HEIGHT)) {

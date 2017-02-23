@@ -13,6 +13,9 @@ public class MsgData implements Serializable {
     public Vector2D m_speed;
     public Vector2D m_direction;	// Should always be unit vector; determines the object's facing
     
+    public int m_team1Score;
+    public int m_team2Score;
+    
     public int m_ID;
     public KeyMessageData m_keyState;
 	
@@ -23,7 +26,7 @@ public class MsgData implements Serializable {
     	m_direction = new Vector2D();
     }
 
-    public MsgData(Vector2D position, Vector2D speed, Vector2D direction, KeyMessageData keyState, int ID){
+    public MsgData(Vector2D position, Vector2D speed, Vector2D direction, KeyMessageData keyState, int ID, int score1, int score2){
     	
     	m_position = position;
     	m_speed = speed;
@@ -31,6 +34,10 @@ public class MsgData implements Serializable {
     	
     	m_keyState = keyState;
     	m_ID = ID;
+    	
+    	m_team1Score = score1;
+    	m_team2Score = score2;
+    	
     }
 
 }

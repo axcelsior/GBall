@@ -20,6 +20,7 @@ public abstract class cGameEntity implements Serializable{
     private double m_maxAcceleration;
     private double m_maxSpeed;
     private double m_friction;
+    protected int m_ID;
 
     public abstract void render(java.awt.Graphics g);
     public abstract double getRadius();
@@ -46,6 +47,10 @@ public abstract class cGameEntity implements Serializable{
 	    m_acceleration = -m_maxAcceleration;
 	}
 	else m_acceleration = a;
+    }
+    
+    public int getID() {
+    	return m_ID;
     }
 
     public void move() {
