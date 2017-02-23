@@ -13,6 +13,7 @@ import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.util.Hashtable;
+import java.util.concurrent.Semaphore;
 
 import Shared.Const;
 import Shared.KeyMessageData;
@@ -27,6 +28,8 @@ public class sWorld {
 	private DatagramSocket m_socket;
 	private ClientListener m_clientListener;
 	private StringListener m_stringListener;
+	
+	private Semaphore m_hsCheck = new Semaphore(0);
 
 	private static class WorldSingletonHolder {
 		public static final sWorld instance = new sWorld();
@@ -69,7 +72,7 @@ public class sWorld {
 				m_gameWindow.repaint();
 			}
 
-			if (updateTimer > 3) {
+			if (updateTimer > 9) {
 				//System.out.println("Sending gamestate to clients.");
 				m_clientListener.sendState();
 				updateTimer = 0;
@@ -89,15 +92,35 @@ public class sWorld {
 			}
 			m_actualFps = 1000 / delta;
 		}
+		/*else TODO Fix the busy wait
+		{
+			try {
+				Thread.sleep(Double.doubleToLongBits(Const.FRAME_INCREMENT - delta));
+			} catch (InterruptedException e) {
+				System.err.println("Error: overslept");
+				e.printStackTrace();
+			}
+			
+			return true;
+		}*/
 		return rv;
 	}
+
 	private void initPlayers() {
 
 		m_stringListener = new StringListener();
 
-		while (!m_stringListener.isHandshook()) {
-			System.out.println("Waiting for handshakes.");
+		try {
+			m_hsCheck.acquire();
+		} catch (InterruptedException e1) {
+			System.err.println("Handshake check never released...");
+			e1.printStackTrace();
+			System.exit(-1);
 		}
+		
+		/*while (!m_stringListener.isHandshook()) {
+			System.out.println("Waiting for handshakes.");
+		}*/
 		System.out.println("Handshake done.");
 		// Team 1
 		sEntityManager.getInstance().addShip(new Vector2D(Const.START_TEAM1_SHIP1_X, Const.START_TEAM1_SHIP1_Y),
@@ -246,6 +269,8 @@ public class sWorld {
 							System.err.println("Error: Cannot send start");
 							e.printStackTrace();
 						}
+						m_hsCheck.release();
+						
 					}
 				}
 

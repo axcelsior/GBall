@@ -99,6 +99,17 @@ public class cWorld {
 			}
 			m_actualFps = 1000 / delta;
 		}
+		/*else	//TODO Fix Busy Wait
+		{
+			try {
+				Thread.sleep(Double.doubleToLongBits(Const.FRAME_INCREMENT - delta));
+			} catch (InterruptedException e) {
+				System.err.println("Error: overslept");
+				e.printStackTrace();
+			}
+			
+			return true;
+		}*/
 		return rv;
 	}
 
