@@ -13,6 +13,7 @@ import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.util.Hashtable;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Semaphore;
 
 import Shared.Const;
@@ -28,6 +29,7 @@ public class sWorld {
 	private DatagramSocket m_socket;
 	private ClientListener m_clientListener;
 	private StringListener m_stringListener;
+	private LagSender m_lagSender;
 	
 	private Semaphore m_hsCheck = new Semaphore(0);
 
@@ -92,17 +94,22 @@ public class sWorld {
 			}
 			m_actualFps = 1000 / delta;
 		}
-		/*else TODO Fix the busy wait
+		else // Busy wait Fixed
 		{
 			try {
-				Thread.sleep(Double.doubleToLongBits(Const.FRAME_INCREMENT - delta));
+				Thread.sleep((long) (Const.FRAME_INCREMENT - delta));
 			} catch (InterruptedException e) {
 				System.err.println("Error: overslept");
 				e.printStackTrace();
 			}
 			
+			m_lastTime += Const.FRAME_INCREMENT;
+			if (delta > 10 * Const.FRAME_INCREMENT) {
+				m_lastTime = System.currentTimeMillis();
+			}
+			
 			return true;
-		}*/
+		}
 		return rv;
 	}
 
@@ -117,10 +124,8 @@ public class sWorld {
 			e1.printStackTrace();
 			System.exit(-1);
 		}
+
 		
-		/*while (!m_stringListener.isHandshook()) {
-			System.out.println("Waiting for handshakes.");
-		}*/
 		System.out.println("Handshake done.");
 		// Team 1
 		sEntityManager.getInstance().addShip(new Vector2D(Const.START_TEAM1_SHIP1_X, Const.START_TEAM1_SHIP1_Y),
@@ -145,7 +150,9 @@ public class sWorld {
 			
 			e.printStackTrace();
 		}
-
+		
+		// Initate with around 80ms (one way)
+		m_lagSender = new LagSender((double) 80);
 		m_clientListener = new ClientListener(m_stringListener.m_IP, m_stringListener.m_port);
 		System.out.println("Initplayers done.");
 	}
@@ -157,6 +164,63 @@ public class sWorld {
 
 	public void addKeyListener(KeyListener k) {
 		m_gameWindow.addKeyListener(k);
+	}
+	
+	public class LagSender extends Thread {
+		
+		private Double lag;
+		ConcurrentLinkedQueue<DatagramPacket> q = new ConcurrentLinkedQueue<DatagramPacket>();
+		ConcurrentLinkedQueue<Double> doubleQ = new ConcurrentLinkedQueue<Double>();
+		
+		public LagSender (Double miliseconds){
+			lag = miliseconds;
+			this.start();
+		}
+		
+		public void run(){
+			while (true) {
+				
+				if ((doubleQ.peek() == null)) {
+					
+					try {
+						Thread.sleep(5L);
+					} catch (InterruptedException e) {
+						System.err.println("Lagsender Overslept");
+						e.printStackTrace();
+						System.exit(-1);
+					}
+					continue;
+				}
+				
+				if (doubleQ.peek() > System.currentTimeMillis()) {
+					try {
+						Thread.sleep((long) (doubleQ.peek() - System.currentTimeMillis()));
+					} catch (InterruptedException e) {
+						System.err.println("Lagsender Overslept");
+						e.printStackTrace();
+						System.exit(-1);
+					}
+				}
+				
+				doubleQ.poll();
+				
+				try {
+					m_socket.send(q.poll());
+				} catch (IOException e) {
+					System.err.println("Error while sending packet");
+					e.printStackTrace();
+					System.exit(-1);
+				}
+				
+				
+				
+			}
+		}
+		
+		public void sendMessage(DatagramPacket packet){
+			q.add(packet);
+			doubleQ.add(System.currentTimeMillis() + lag);
+		}
 	}
 
 	public class StringListener extends Thread {
@@ -337,19 +401,22 @@ public class sWorld {
 			for (int i = 0; i < 4; i++) {
 				// create packet on m_IP[i] and port[i]
 				byte buf[] = new byte[1024];
-				DatagramPacket p = new DatagramPacket(buf, buf.length, m_IP[i], m_port[i]);
+				
 
 				for (int j = 0; j < dataList.length; j++) {
 					// Serialize(dataList[j]
+					DatagramPacket p = new DatagramPacket(buf, buf.length, m_IP[i], m_port[i]);
 					p.setData(Serialize(dataList[j]));
 					
 					// send packet to client
-					try {
+					m_lagSender.sendMessage(p);
+					
+					/*try {
 						m_socket.send(p);
 					} catch (IOException e) {
 						System.err.println("Error: Cannot send state update");
 						e.printStackTrace();
-					}
+					}*/
 
 				}
 			}

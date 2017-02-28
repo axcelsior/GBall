@@ -15,6 +15,9 @@ import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.util.Hashtable;
+import java.util.PriorityQueue;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 import javax.xml.crypto.dsig.keyinfo.PGPData;
 
@@ -45,7 +48,9 @@ public class cWorld {
 
 	private DatagramSocket m_socket;
 	private ServerListener m_serverListener;
+	private LagSender m_lagSender;
 	private InetAddress m_serverAddress;
+	private int m_ping = 160;
 
 	private cWorld() {
 
@@ -99,17 +104,23 @@ public class cWorld {
 			}
 			m_actualFps = 1000 / delta;
 		}
-		/*else	//TODO Fix Busy Wait
+		else //busy wait fixed
 		{
+
 			try {
-				Thread.sleep(Double.doubleToLongBits(Const.FRAME_INCREMENT - delta));
+				Thread.sleep((long) (Const.FRAME_INCREMENT - delta));
 			} catch (InterruptedException e) {
 				System.err.println("Error: overslept");
 				e.printStackTrace();
 			}
 			
+			m_lastTime += Const.FRAME_INCREMENT;
+			if (delta > 10 * Const.FRAME_INCREMENT) {
+				m_lastTime = System.currentTimeMillis();
+			}
+			
 			return true;
-		}*/
+		}
 		return rv;
 	}
 
@@ -171,13 +182,75 @@ public class cWorld {
 
 		// Send ready, this will pause until all players are started
 		sendMessage("start");
-		/*
-		 * try { this.wait(2000L); //TODO Fix Illegal Monitor exception? } catch
-		 * (InterruptedException e) { e.printStackTrace(); }
-		 */
-
+		try {
+			Thread.sleep(200L);
+		} catch (InterruptedException e) {
+			System.err.println("Error: Client Overslept");
+			e.printStackTrace();
+			System.exit(-1);
+		}
+		
+		//Initiate with about 80ms (one way)
+		m_lagSender = new LagSender((double) m_ping / (double) 2);
 		m_serverListener = new ServerListener(m_serverAddress, SERVERPORT);
 
+	}
+	
+	public class LagSender extends Thread {
+		
+		private Double lag;
+		ConcurrentLinkedQueue<DatagramPacket> q = new ConcurrentLinkedQueue<DatagramPacket>();
+		ConcurrentLinkedQueue<Double> doubleQ = new ConcurrentLinkedQueue<Double>();
+		
+		public LagSender (Double miliseconds){
+			lag = miliseconds;
+			this.start();
+		}
+		
+		public void run(){
+			while (true) {
+				
+				if ((doubleQ.peek() == null)) {
+					
+					try {
+						Thread.sleep(5L);
+					} catch (InterruptedException e) {
+						System.err.println("Lagsender Overslept");
+						e.printStackTrace();
+						System.exit(-1);
+					}
+					continue;
+				}
+				
+				if (doubleQ.peek() > System.currentTimeMillis()) {
+					try {
+						Thread.sleep((long) (doubleQ.peek() - System.currentTimeMillis()));
+					} catch (InterruptedException e) {
+						System.err.println("Lagsender Overslept");
+						e.printStackTrace();
+						System.exit(-1);
+					}
+				}
+				
+				doubleQ.poll();
+				
+				try {
+					m_socket.send(q.poll());
+				} catch (IOException e) {
+					System.err.println("Error while sending packet");
+					e.printStackTrace();
+					System.exit(-1);
+				}
+				
+				
+				
+			}
+		}
+		
+		public void sendMessage(DatagramPacket packet){
+			q.add(packet);
+			doubleQ.add(System.currentTimeMillis() + lag);
+		}
 	}
 
 	private int sendMessage(String message) {
@@ -261,15 +334,19 @@ public class cWorld {
 			KeyMessageData state = cEntityManager.getInstance().getPlayerState();
 			byte[] data = new byte[1024];
 			data = Serialize(state);
-			System.out.println("Sending data from client");
+			//System.out.println("Sending data from client");
 			DatagramPacket p = new DatagramPacket(data, data.length, m_IP, m_port);
 
-			try {
+			
+			// Call the LagSender to send it
+			m_lagSender.sendMessage(p);
+			
+			/*try {
 				m_socket.send(p);
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
-			}
+			}*/
 
 		}
 
@@ -288,10 +365,11 @@ public class cWorld {
 					e.printStackTrace();
 					System.exit(-1);
 				}
-				System.out.println("Received Data.");
 				data = Deserialize(p.getData());
+				
+				//System.out.println("Received: " + data.m_ID + "id. " + data.m_position.getX() + ", " + data.m_position.getY() + "pos.");
 
-				cEntityManager.getInstance().updateShipData(data);
+				cEntityManager.getInstance().updateShipData(data, m_ping);
 				ScoreKeeper.getInstance().setScores(data.m_team1Score, data.m_team2Score);
 
 			} while (true);

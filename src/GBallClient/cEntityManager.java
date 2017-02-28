@@ -53,7 +53,7 @@ public class cEntityManager {
 		}
 	}
 
-	public void updateShipData(MsgData data) {
+	public void updateShipData(MsgData data, int ping) {
 
 		for (ListIterator<cGameEntity> itr = m_entities.listIterator(0); itr.hasNext();) {
 			cGameEntity e = itr.next();

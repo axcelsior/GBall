@@ -10,7 +10,7 @@ import Shared.Vector2D;
 public class cShip extends cGameEntity{
 
 	private Color m_color;
-	private int rotation = 0; // Set to 1 when rotating clockwise, -1 when
+	
 								// rotating counterclockwise
 	private boolean braking = false;
 
@@ -43,7 +43,7 @@ public class cShip extends cGameEntity{
 			setAcceleration(0);
 		}
 		
-		rotation = tmpRotation;
+		m_rotation = tmpRotation;
 	}
 	
 	public void correctPosition(Vector2D position, Vector2D speed, Vector2D direction) {
@@ -63,8 +63,8 @@ public class cShip extends cGameEntity{
 	@Override
 	public void move() {
 		updateKeys();
-		if (rotation != 0) {
-			rotate(rotation * Const.SHIP_ROTATION);
+		if (m_rotation != 0) {
+			rotate(m_rotation * Const.SHIP_ROTATION);
 			scaleSpeed(Const.SHIP_TURN_BRAKE_SCALE);
 		}
 		if (m_braking) {

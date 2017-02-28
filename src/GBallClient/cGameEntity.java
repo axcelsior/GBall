@@ -3,6 +3,7 @@ package GBallClient;
 import java.io.Serializable;
 
 import Shared.Vector2D;
+import Shared.Const;
 
 public abstract class cGameEntity implements Serializable{
     /**
@@ -14,6 +15,11 @@ public abstract class cGameEntity implements Serializable{
     private final Vector2D m_initialDirection;
     private final Vector2D m_speed;
     private final Vector2D m_direction;	// Should always be unit vector; determines the object's facing
+    protected int m_rotation = 0; // Set to 1 when rotating clockwise, -1 when
+    
+    private Vector2D m_targetPosition;
+    private Vector2D m_targetSpeed;
+    private Vector2D m_targetDirection;
  
     private double m_acceleration;	// Accelerates by multiplying this with m_direction
     private long   m_lastUpdateTime;
@@ -54,33 +60,63 @@ public abstract class cGameEntity implements Serializable{
     }
 
     public void move() {
-	// Change to per-frame movement by setting delta to a constant
-	// Such as 0.017 for ~60FPS
-
-	long currentTime = System.currentTimeMillis();
-	double delta = (double) (currentTime - m_lastUpdateTime) / (double) 1000;
-
-	if(m_acceleration > 0) {
-	    changeSpeed(m_direction.multiplyOperator(m_acceleration * delta));
-	}
-	else scaleSpeed(m_friction);
-
-	m_position.add(m_speed.multiplyOperator(delta));
-	m_lastUpdateTime = currentTime;
+		// Change to per-frame movement by setting delta to a constant
+		// Such as 0.017 for ~60FPS
+	
+		long currentTime = System.currentTimeMillis();
+		double delta = (double) (currentTime - m_lastUpdateTime) / (double) 1000;
+	
+		if(m_acceleration > 0) {
+		    changeSpeed(m_direction.multiplyOperator(m_acceleration * delta));
+		}
+		else scaleSpeed(m_friction);
+	
+		m_position.add(m_speed.multiplyOperator(delta));
+		m_lastUpdateTime = currentTime;
+    }
+    
+    public void delayedUpdate(int ping, Vector2D speed, Vector2D position, Vector2D direction) {
+    	
+    	double age = (double) ping / (double) 2;
+    	
+    	//Predict Direction
+    	m_targetDirection = direction;
+    	if (m_rotation != 0) {
+			m_targetDirection.rotate(m_rotation * Const.SHIP_ROTATION * (age / Const.FRAME_INCREMENT));
+			scaleSpeed(Const.SHIP_TURN_BRAKE_SCALE);
+		}
+    	
+    	//Predict Speed
+    	if(m_acceleration > 0) {
+    		m_targetSpeed = speed;
+		    m_targetSpeed.add(m_direction.multiplyOperator(m_acceleration * (age + Const.INTERPOLATION_TIME)));	//TODO Direction here is iffy
+		    if(m_targetSpeed.length() > m_maxSpeed) {
+			    m_targetSpeed.setLength(m_maxSpeed);
+			}
+		}
+		else scaleSpeed(m_friction);
+    	
+    	//Predict Position
+    	m_targetPosition = position;
+    	m_targetPosition.add(m_speed.multiplyOperator(age + Const.INTERPOLATION_TIME));
+    	
+    	
+    	
+    	
     }
 
     public void scaleSpeed(double scale) {
-	m_speed.scale(scale);
-	if(m_speed.length() > m_maxSpeed) {
-	    m_speed.setLength(m_maxSpeed);
-	}
+		m_speed.scale(scale);
+		if(m_speed.length() > m_maxSpeed) {
+		    m_speed.setLength(m_maxSpeed);
+		}
     }
 
     public void changeSpeed(final Vector2D delta) {
 	m_speed.add(delta);
-	if(m_speed.length() > m_maxSpeed) {
-	    m_speed.setLength(m_maxSpeed);
-	}
+		if(m_speed.length() > m_maxSpeed) {
+		    m_speed.setLength(m_maxSpeed);
+		}
     }
 
     public void resetPosition() {
