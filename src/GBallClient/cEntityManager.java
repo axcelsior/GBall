@@ -61,24 +61,18 @@ public class cEntityManager {
 				if (((cShip) e).getID() == data.m_ID) {
 					// Update Keys
 					((cShip) e).setKeys(data.m_keyState);
-					((cShip) e).setSpeed(data.m_speed);
-					((cShip) e).setDirection(data.m_direction);
-					((cShip) e).setPosition(data.m_position.getX(), data.m_position.getY());
+					((cShip) e).delayedUpdate(ping, data.m_speed, data.m_position, data.m_direction, data.m_keyState.brakeKey);
 					break;
 				}
 			} else if (e instanceof cPlayerShip) {
 				if (((cPlayerShip) e).getID() == data.m_ID) {
-					((cPlayerShip) e).setSpeed(data.m_speed);
-					((cPlayerShip) e).setDirection(data.m_direction);
-					((cPlayerShip) e).setPosition(data.m_position.getX(), data.m_position.getY());
+					((cPlayerShip) e).delayedUpdate(ping, data.m_speed, data.m_position, data.m_direction, data.m_keyState.brakeKey);
 					break;
 				}
 
 			} else if (e instanceof cBall) {
 				if (data.m_ID == e.getID()) {
-					((cBall) e).setSpeed(data.m_speed);
-					((cBall) e).setDirection(data.m_direction);
-					((cBall) e).setPosition(data.m_position.getX(), data.m_position.getY());
+					((cBall) e).delayedUpdate(ping, data.m_speed, data.m_position, data.m_direction, data.m_keyState.brakeKey);
 					break;
 				}
 			}

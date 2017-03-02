@@ -31,6 +31,8 @@ public class sWorld {
 	private StringListener m_stringListener;
 	private LagSender m_lagSender;
 	
+	private int m_ping = 160;
+	
 	private Semaphore m_hsCheck = new Semaphore(0);
 
 	private static class WorldSingletonHolder {
@@ -440,7 +442,7 @@ public class sWorld {
 				data = Deserialize(p.getData());
 
 				sEntityManager.getInstance().setShipKeys(data,
-						m_hash.get(p.getAddress().getHostAddress() + ":" + p.getPort()));
+						m_hash.get(p.getAddress().getHostAddress() + ":" + p.getPort()), m_ping);
 
 			} while (true);
 

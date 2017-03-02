@@ -44,12 +44,13 @@ public class sEntityManager {
 		}
     }
     
-    public void setShipKeys(KeyMessageData keyStates,int ID){
+    public void setShipKeys(KeyMessageData keyStates, int ID, int ping){
     	for (ListIterator<sGameEntity> itr = m_entities.listIterator(0); itr.hasNext();){
     		sGameEntity e = itr.next();
     		if (e instanceof sShip){
     			if (((sShip) e).getID() == ID){
     				((sShip) e).setKeys(keyStates);
+    				//((sShip) e).delayedUpdate(ping); DONT!
     				break;
     			}
     		}

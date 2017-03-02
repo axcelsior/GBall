@@ -10,15 +10,17 @@ import Shared.Vector2D;
 public class sShip extends sGameEntity{
 
 	private Color m_color;
-	private int rotation = 0; // Set to 1 when rotating clockwise, -1 when
+	private int m_rotation = 0; // Set to 1 when rotating clockwise, -1 when
+	private Vector2D m_targetPosition;
+    private Vector2D m_targetSpeed;
+    private Vector2D m_targetDirection;
 								// rotating counterclockwise
-	private boolean braking = false;
 
 	// Keys
-	boolean m_braking;
-	boolean m_forward;
-	boolean m_left;
-	boolean m_right;
+	private boolean m_braking;
+	private boolean m_forward;
+	private boolean m_left;
+	private boolean m_right;
 	
 
 	public sShip(final Vector2D position, final Vector2D speed, final Vector2D direction, final Color col,int ID) {
@@ -43,8 +45,55 @@ public class sShip extends sGameEntity{
 			setAcceleration(0);
 		}
 		
-		rotation = tmpRotation;
+		m_rotation = tmpRotation;
 	}
+	
+	public void delayedUpdate(int ping) {
+    	
+    	double age = (double) ping / (double) 2;
+    	
+    	//Predict Direction
+    	//Future direction is the recieved direction and spin if its spinning for message age + our interpolation time
+    	m_targetDirection = m_direction;
+    	if (m_rotation != 0) {
+			m_targetDirection.rotate(m_rotation * Const.SHIP_ROTATION * ((age + Const.INTERPOLATION_TIME) / Const.FRAME_INCREMENT));
+			scaleSpeed(Const.SHIP_TURN_BRAKE_SCALE);
+		}
+    	
+    	//Predict Speed
+    	m_targetSpeed = m_speed;
+    	if(m_acceleration > 0) {
+		    m_targetSpeed.add(m_targetDirection.multiplyOperator(m_acceleration * (age + Const.INTERPOLATION_TIME)));	// Adds acceleration in the future direction
+		    if(m_targetSpeed.length() > m_maxSpeed) {
+			    m_targetSpeed.setLength(m_maxSpeed);
+			}
+		}
+    	else if (m_braking) {
+			//Friction when breaking
+			m_targetSpeed.multiplyOperator(Math.pow(Const.SHIP_BRAKE_SCALE, (age + Const.INTERPOLATION_TIME) / Const.FRAME_INCREMENT));
+		} else {
+			//Friction when not accelerating
+			m_targetSpeed.multiplyOperator(Math.pow(Const.SHIP_FRICTION, (age + Const.INTERPOLATION_TIME) / Const.FRAME_INCREMENT));
+		}
+    	
+    	//Predict Position
+    	m_targetPosition = m_position;
+    	Vector2D avgSpeed = m_speed;
+    	avgSpeed.add(m_targetSpeed);
+    	avgSpeed.multiplyOperator(0.5);
+    	
+    	m_targetPosition.add(avgSpeed.multiplyOperator(age + Const.INTERPOLATION_TIME));
+    	
+    	
+    	//m_interpolationDeadline = System.currentTimeMillis() + (long) Const.INTERPOLATION_TIME;
+    	
+    	//Temp test
+    	
+    	setSpeed(m_targetSpeed);
+    	setDirection(m_targetDirection);
+    	setPosition(m_targetPosition.getX(), m_targetPosition.getY());
+    	
+    }
 
 	public void setKeys(KeyMessageData keyState) {
 		m_braking = keyState.brakeKey;
@@ -62,8 +111,8 @@ public class sShip extends sGameEntity{
 	@Override
 	public void move() {
 		updateKeys();
-		if (rotation != 0) {
-			rotate(rotation * Const.SHIP_ROTATION);
+		if (m_rotation != 0) {
+			rotate(m_rotation * Const.SHIP_ROTATION);
 			scaleSpeed(Const.SHIP_TURN_BRAKE_SCALE);
 		}
 		if (m_braking) {

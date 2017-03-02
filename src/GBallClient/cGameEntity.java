@@ -20,6 +20,9 @@ public abstract class cGameEntity implements Serializable{
     private Vector2D m_targetPosition;
     private Vector2D m_targetSpeed;
     private Vector2D m_targetDirection;
+    private Vector2D m_deltaPosition;
+    private Vector2D m_deltaSpeed;
+    private double m_deltaDirection;
  
     private double m_acceleration;	// Accelerates by multiplying this with m_direction
     private long   m_lastUpdateTime;
@@ -27,6 +30,7 @@ public abstract class cGameEntity implements Serializable{
     private double m_maxSpeed;
     private double m_friction;
     protected int m_ID;
+    private long m_interpolationDeadline = 0;
 
     public abstract void render(java.awt.Graphics g);
     public abstract double getRadius();
@@ -72,35 +76,88 @@ public abstract class cGameEntity implements Serializable{
 		else scaleSpeed(m_friction);
 	
 		m_position.add(m_speed.multiplyOperator(delta));
+		
+		if (m_interpolationDeadline >= System.currentTimeMillis()) {
+			m_position.add(m_deltaPosition.multiplyOperator(delta));
+			m_direction.rotate(m_deltaDirection);
+		}
 		m_lastUpdateTime = currentTime;
     }
-    
-    public void delayedUpdate(int ping, Vector2D speed, Vector2D position, Vector2D direction) {
+        
+    public void delayedUpdate(int ping, Vector2D speed, Vector2D position, Vector2D direction, boolean breaking) {
     	
     	double age = (double) ping / (double) 2;
     	
     	//Predict Direction
+    	//Future direction is the recieved direction and spin if its spinning for message age + our interpolation time
     	m_targetDirection = direction;
     	if (m_rotation != 0) {
-			m_targetDirection.rotate(m_rotation * Const.SHIP_ROTATION * (age / Const.FRAME_INCREMENT));
+			m_targetDirection.rotate(m_rotation * Const.SHIP_ROTATION * ((age + Const.INTERPOLATION_TIME) / Const.FRAME_INCREMENT));
 			scaleSpeed(Const.SHIP_TURN_BRAKE_SCALE);
 		}
     	
     	//Predict Speed
+
+		m_targetSpeed = speed;
     	if(m_acceleration > 0) {
-    		m_targetSpeed = speed;
-		    m_targetSpeed.add(m_direction.multiplyOperator(m_acceleration * (age + Const.INTERPOLATION_TIME)));	//TODO Direction here is iffy
+		    m_targetSpeed.add(m_targetDirection.multiplyOperator(m_acceleration * (age + Const.INTERPOLATION_TIME) / (double) 1000));	// Adds acceleration in the future direction
 		    if(m_targetSpeed.length() > m_maxSpeed) {
 			    m_targetSpeed.setLength(m_maxSpeed);
 			}
 		}
-		else scaleSpeed(m_friction);
+    	else if (breaking) {
+			//Friction when breaking
+			m_targetSpeed.scale(Math.pow(Const.SHIP_BRAKE_SCALE, (age + Const.INTERPOLATION_TIME) / Const.FRAME_INCREMENT));
+		} else {
+			//Friction when not accelerating
+			m_targetSpeed.scale(Math.pow(Const.BALL_FRICTION, (age + Const.INTERPOLATION_TIME) / Const.FRAME_INCREMENT));
+		}
     	
     	//Predict Position
     	m_targetPosition = position;
-    	m_targetPosition.add(m_speed.multiplyOperator(age + Const.INTERPOLATION_TIME));
+    	Vector2D avgSpeed = speed;
+    	avgSpeed.add(m_targetSpeed);
+    	avgSpeed.scale(0.5);
+    	
+    	Vector2D avgDirection = m_targetDirection;
+    	avgDirection.add(direction);
+    	avgDirection.scale(0.5);
+    	avgDirection.setLength(1);
+    	
+    	m_targetPosition.add(speed.multiplyOperator((age + Const.INTERPOLATION_TIME) / (double) 1000));
+    	
+    	m_targetPosition.add(avgDirection.multiplyOperator(m_acceleration * Math.pow(((age + Const.INTERPOLATION_TIME) / (double) 1000), 2.0) / 2.0));
     	
     	
+    	m_interpolationDeadline = System.currentTimeMillis() + (long) Const.INTERPOLATION_TIME;
+    	
+    	//Temp test
+    	/*
+    	setSpeed(m_targetSpeed);
+    	setDirection(m_targetDirection);
+    	setPosition(m_targetPosition.getX(), m_targetPosition.getY());
+    	*/
+    	
+    	
+    	//Speed at which to move to get into position after the interpolation time
+    	m_deltaPosition = m_targetPosition;
+    	m_deltaPosition.subtract(m_position);
+    	m_deltaPosition.scale(1000.0 / (Const.INTERPOLATION_TIME));
+    	
+    	
+    	//Same for Rotation
+    	double rad1;
+    	double rad2;
+
+    	rad1 = Math.atan2(m_targetDirection.getY(), m_targetDirection.getX());
+    	rad2 = Math.atan2(m_direction.getY(), m_direction.getX());
+    	
+    	m_deltaDirection = rad1 - rad2;
+    	m_deltaDirection /= ((Const.INTERPOLATION_TIME) / Const.FRAME_INCREMENT);
+    	
+    	//TODO Do this with speed
+    	
+    	//System.out.println("Predicting\nSpeed: " + m_targetSpeed.length() + "\nDirection x=" + m_targetDirection.getX() + " y=" + m_targetDirection.getY() + "\nPosition x=" + m_targetPosition.getX() + " y=" + m_targetPosition.getY() + "\niSpeed x=" + m_iSpeed.getX() + " y=" + m_iSpeed.getY());
     	
     	
     }

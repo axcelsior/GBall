@@ -39,7 +39,7 @@ public final class Const {
     public final static double		BALL_X = DISPLAY_WIDTH / 2;
     public final static double		BALL_Y = DISPLAY_HEIGHT / 2;     
     
-    public final static double		INTERPOLATION_TIME = 100;
+    public final static double		INTERPOLATION_TIME = 100;	//Time taken to interpolate to target state
 
     // Ship-related constants
     public final static int	        SHIP_RADIUS = 22;

@@ -4,6 +4,7 @@ import java.io.Serializable;
 import java.util.ListIterator;
 
 import GBallClient.cGameEntity;
+import Shared.Const;
 import Shared.KeyMessageData;
 import Shared.MsgData;
 import Shared.ScoreKeeper;
@@ -14,18 +15,21 @@ public abstract class sGameEntity implements Serializable {
 	 * 
 	 */
 	private static final long serialVersionUID = 1L;
-	private final Vector2D m_position;
+	protected final Vector2D m_position;
 	private final Vector2D m_initialPosition;
 	private final Vector2D m_initialDirection;
-	private final Vector2D m_speed;
-	private final Vector2D m_direction; // Should always be unit vector;
+	protected final Vector2D m_speed;
+	protected final Vector2D m_direction; // Should always be unit vector;
 										// determines the object's facing
+	
+	
+    private long m_interpolationDeadline = 0;
 
-	private double m_acceleration; // Accelerates by multiplying this with
+	protected double m_acceleration; // Accelerates by multiplying this with
 									// m_direction
 	private long m_lastUpdateTime;
-	private double m_maxAcceleration;
-	private double m_maxSpeed;
+	protected double m_maxAcceleration;
+	protected double m_maxSpeed;
 	private double m_friction;
 	protected int m_ID = -1;
 	
@@ -120,13 +124,22 @@ public abstract class sGameEntity implements Serializable {
 	public Vector2D getPosition() {
 		return m_position;
 	}
+   
 
 	public Vector2D getSpeed() {
 		return m_speed;
 	}
+	
+	public void setSpeed(Vector2D speed) {
+    	m_speed.set(speed.getX(), speed.getY());
+    }
 
 	public Vector2D getDirection() {
 		return m_direction;
+	}
+	
+	public void setDirection(Vector2D dir) {
+		m_direction.set(dir.getX(), dir.getY());
 	}
 
 	public void setPosition(double x, double y) {
