@@ -76,7 +76,7 @@ public class sWorld {
 				m_gameWindow.repaint();
 			}
 
-			if (updateTimer > 9) {
+			if (updateTimer > 1) {
 				//System.out.println("Sending gamestate to clients.");
 				m_clientListener.sendState();
 				updateTimer = 0;
@@ -154,7 +154,7 @@ public class sWorld {
 		}
 		
 		// Initate with around 80ms (one way)
-		m_lagSender = new LagSender((double) 80);
+		m_lagSender = new LagSender(Const.PING / 2.0);
 		m_clientListener = new ClientListener(m_stringListener.m_IP, m_stringListener.m_port);
 		System.out.println("Initplayers done.");
 	}

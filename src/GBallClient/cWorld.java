@@ -50,7 +50,7 @@ public class cWorld {
 	private ServerListener m_serverListener;
 	private LagSender m_lagSender;
 	private InetAddress m_serverAddress;
-	private int m_ping = 160;
+	private double m_ping = Const.PING;
 
 	private cWorld() {
 
@@ -81,11 +81,11 @@ public class cWorld {
 			if (newFrame()) {
 				cEntityManager.getInstance().updatePositions();
 				cEntityManager.getInstance().checkBorderCollisions(Const.DISPLAY_WIDTH, Const.DISPLAY_HEIGHT);
-				cEntityManager.getInstance().checkShipCollisions();
+				//cEntityManager.getInstance().checkShipCollisions();
 				updateTimer++;
 				m_gameWindow.repaint();
 			}
-			if (updateTimer > 3) {
+			if (updateTimer > 1) {
 				// System.out.println("Sending gamestate to clients.");
 				m_serverListener.sendPlayerState();
 				updateTimer = 0;
@@ -191,7 +191,7 @@ public class cWorld {
 		}
 		
 		//Initiate with about 80ms (one way)
-		m_lagSender = new LagSender((double) m_ping / (double) 2);
+		m_lagSender = new LagSender(m_ping / 2.0);
 		m_serverListener = new ServerListener(m_serverAddress, SERVERPORT);
 
 	}

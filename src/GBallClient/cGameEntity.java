@@ -23,6 +23,9 @@ public abstract class cGameEntity implements Serializable{
     private Vector2D m_deltaPosition;
     private Vector2D m_deltaSpeed;
     private double m_deltaDirection;
+    public boolean m_colliding;
+    private Vector2D m_collisionPrediction;
+    private Vector2D m_collisionDelta;
  
     private double m_acceleration;	// Accelerates by multiplying this with m_direction
     private long   m_lastUpdateTime;
@@ -47,6 +50,8 @@ public abstract class cGameEntity implements Serializable{
 	m_lastUpdateTime = System.currentTimeMillis(); 
 	m_initialPosition = new Vector2D(position.getX(), position.getY());
 	m_initialDirection = new Vector2D(direction.getX(), direction.getY());
+	m_collisionPrediction = new Vector2D(0,0);
+	
     }
 
     public void setAcceleration(double a) {
@@ -69,24 +74,38 @@ public abstract class cGameEntity implements Serializable{
 	
 		long currentTime = System.currentTimeMillis();
 		double delta = (double) (currentTime - m_lastUpdateTime) / (double) 1000;
+		
+		//changeSpeed(m_deltaSpeed);
 	
 		if(m_acceleration > 0) {
 		    changeSpeed(m_direction.multiplyOperator(m_acceleration * delta));
 		}
 		else scaleSpeed(m_friction);
+		
+		
+		//TODO Get this to turn off better. Like a deadline or something
+		if (m_colliding) {
+			m_position.add(m_collisionDelta.multiplyOperator(delta));
+		}
+		
+			
+		if (m_interpolationDeadline >= System.currentTimeMillis()) {
+			if (!m_colliding)
+				m_position.add(m_deltaPosition.multiplyOperator(delta));
+			
+			m_direction.rotate(m_deltaDirection);
+			
+		}
 	
 		m_position.add(m_speed.multiplyOperator(delta));
 		
-		if (m_interpolationDeadline >= System.currentTimeMillis()) {
-			m_position.add(m_deltaPosition.multiplyOperator(delta));
-			m_direction.rotate(m_deltaDirection);
-		}
+		
 		m_lastUpdateTime = currentTime;
     }
         
-    public void delayedUpdate(int ping, Vector2D speed, Vector2D position, Vector2D direction, boolean breaking) {
+    public void delayedUpdate(double ping, Vector2D speed, Vector2D position, Vector2D direction, boolean breaking) {
     	
-    	double age = (double) ping / (double) 2;
+    	double age = ping / 2.0;
     	
     	//Predict Direction
     	//Future direction is the recieved direction and spin if its spinning for message age + our interpolation time
@@ -124,10 +143,47 @@ public abstract class cGameEntity implements Serializable{
     	avgDirection.scale(0.5);
     	avgDirection.setLength(1);
     	
-    	m_targetPosition.add(speed.multiplyOperator((age + Const.INTERPOLATION_TIME) / (double) 1000));
+    	m_targetPosition.add(avgSpeed.multiplyOperator((age + Const.INTERPOLATION_TIME) / (double) 1000));
     	
     	m_targetPosition.add(avgDirection.multiplyOperator(m_acceleration * Math.pow(((age + Const.INTERPOLATION_TIME) / (double) 1000), 2.0) / 2.0));
     	
+    	//Predict wall collisions
+    	
+    	if (!m_colliding) {
+	    	
+	    	double newX = m_targetPosition.getX();
+			double newY = m_targetPosition.getY();
+			double radius = getRadius();
+	
+			if (newX + radius > (Const.DISPLAY_WIDTH - Const.WINDOW_BORDER_WIDTH)) {
+				m_targetPosition.set(Const.DISPLAY_WIDTH - radius - Const.WINDOW_BORDER_WIDTH - ((newX + radius) - (Const.DISPLAY_WIDTH + Const.WINDOW_BORDER_WIDTH)), m_targetPosition.getY());
+				newX = Const.DISPLAY_WIDTH - radius - Const.WINDOW_BORDER_WIDTH;
+				m_colliding = true;
+			} else if ((newX - getRadius()) < Const.WINDOW_BORDER_WIDTH) {
+				m_targetPosition.set(- newX + radius + Const.WINDOW_BORDER_WIDTH, m_targetPosition.getY());
+				newX = radius + Const.WINDOW_BORDER_WIDTH;
+				m_colliding = true;
+			}
+	
+			if (newY + radius > (Const.DISPLAY_HEIGHT - Const.WINDOW_BOTTOM_HEIGHT)) {
+				m_targetPosition.set(m_targetPosition.getX(), Const.DISPLAY_HEIGHT - radius - Const.WINDOW_BOTTOM_HEIGHT - ((newY + radius) - (Const.DISPLAY_HEIGHT + Const.WINDOW_BOTTOM_HEIGHT)));
+				newY = Const.DISPLAY_HEIGHT - radius - Const.WINDOW_BOTTOM_HEIGHT;
+				m_colliding = true;
+			} else if (newY - radius < Const.WINDOW_TOP_HEIGHT) {
+				m_targetPosition.set(m_targetPosition.getX(), - newY + radius + Const.WINDOW_BOTTOM_HEIGHT);
+				newY = radius + Const.WINDOW_TOP_HEIGHT;
+				m_colliding = true;
+			}
+			
+	
+			m_collisionPrediction.set(newX, newY);
+			
+			m_collisionDelta = m_collisionPrediction;
+			m_collisionDelta.subtract(m_position);
+			m_collisionDelta.scale(1000.0 / Const.INTERPOLATION_TIME);
+
+	
+    	}
     	
     	m_interpolationDeadline = System.currentTimeMillis() + (long) Const.INTERPOLATION_TIME;
     	
@@ -142,7 +198,7 @@ public abstract class cGameEntity implements Serializable{
     	//Speed at which to move to get into position after the interpolation time
     	m_deltaPosition = m_targetPosition;
     	m_deltaPosition.subtract(m_position);
-    	m_deltaPosition.scale(1000.0 / (Const.INTERPOLATION_TIME));
+    	m_deltaPosition.scale(1000.0 / Const.INTERPOLATION_TIME);
     	
     	
     	//Same for Rotation
@@ -156,6 +212,9 @@ public abstract class cGameEntity implements Serializable{
     	m_deltaDirection /= ((Const.INTERPOLATION_TIME) / Const.FRAME_INCREMENT);
     	
     	//TODO Do this with speed
+    	m_deltaSpeed = speed;
+    	m_deltaSpeed.add(m_targetSpeed);
+    	m_deltaSpeed.scale(0.5);
     	
     	//System.out.println("Predicting\nSpeed: " + m_targetSpeed.length() + "\nDirection x=" + m_targetDirection.getX() + " y=" + m_targetDirection.getY() + "\nPosition x=" + m_targetPosition.getX() + " y=" + m_targetPosition.getY() + "\niSpeed x=" + m_iSpeed.getX() + " y=" + m_iSpeed.getY());
     	

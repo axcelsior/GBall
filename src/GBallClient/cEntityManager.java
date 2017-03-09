@@ -53,7 +53,7 @@ public class cEntityManager {
 		}
 	}
 
-	public void updateShipData(MsgData data, int ping) {
+	public void updateShipData(MsgData data, double ping) {
 
 		for (ListIterator<cGameEntity> itr = m_entities.listIterator(0); itr.hasNext();) {
 			cGameEntity e = itr.next();
@@ -101,17 +101,21 @@ public class cEntityManager {
 			if (newX + radius > (screenWidth - Const.WINDOW_BORDER_WIDTH)) {
 				newX = screenWidth - radius - Const.WINDOW_BORDER_WIDTH;
 				e.deflectX();
+				e.m_colliding = false;
 			} else if ((newX - e.getRadius()) < Const.WINDOW_BORDER_WIDTH) {
 				newX = radius + Const.WINDOW_BORDER_WIDTH;
 				e.deflectX();
+				e.m_colliding = false;
 			}
 
 			if (newY + radius > (screenHeight - Const.WINDOW_BOTTOM_HEIGHT)) {
 				newY = screenHeight - radius - Const.WINDOW_BOTTOM_HEIGHT;
 				e.deflectY();
+				e.m_colliding = false;
 			} else if (newY - radius < Const.WINDOW_TOP_HEIGHT) {
 				newY = radius + Const.WINDOW_TOP_HEIGHT;
 				e.deflectY();
+				e.m_colliding = false;
 			}
 
 			e.setPosition(newX, newY);
