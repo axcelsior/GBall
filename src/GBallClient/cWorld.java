@@ -19,6 +19,7 @@ import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
+import javax.swing.JOptionPane;
 import javax.xml.crypto.dsig.keyinfo.PGPData;
 
 import GBall.sWorld.ClientListener;
@@ -30,8 +31,8 @@ import Shared.Vector2D;
 
 public class cWorld {
 
-	public static final String SERVERIP = "127.0.0.1"; // 'Within' the emulator!
-	public static final int SERVERPORT = 25025;
+	public static final String SERVERIP = JOptionPane.showInputDialog(null, "ServerIP", "Enter ServerIP", JOptionPane.QUESTION_MESSAGE); // 'Within' the emulator!
+	public static final int SERVERPORT = Integer.parseInt(JOptionPane.showInputDialog(null, "ServerPort", "Enter ServerPort", JOptionPane.QUESTION_MESSAGE));
 
 	private static class WorldSingletonHolder {
 		public static final cWorld instance = new cWorld();
@@ -81,7 +82,7 @@ public class cWorld {
 			if (newFrame()) {
 				cEntityManager.getInstance().updatePositions();
 				cEntityManager.getInstance().checkBorderCollisions(Const.DISPLAY_WIDTH, Const.DISPLAY_HEIGHT);
-				//cEntityManager.getInstance().checkShipCollisions();
+				cEntityManager.getInstance().checkShipCollisions();
 				updateTimer++;
 				m_gameWindow.repaint();
 			}

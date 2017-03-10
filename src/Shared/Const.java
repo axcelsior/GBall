@@ -46,7 +46,7 @@ public final class Const {
     // Ship-related constants
     public final static int	        SHIP_RADIUS = 22;
     public final static double	        SHIP_MAX_ACCELERATION = 400.0;
-    public final static double	        SHIP_MAX_SPEED = 370.0;
+    public final static double	        SHIP_MAX_SPEED = 300.0;
     public final static double	        SHIP_BRAKE_SCALE = 0.978; // Scale speed by this factor (per frame) when braking
     public final static double	        SHIP_TURN_BRAKE_SCALE = 0.99; // Scale speed by this factor (per frame) when turning
     public final static double         SHIP_FRICTION = 0.99; // Scale speed by this factor (per frame) when not accelerating
@@ -55,7 +55,7 @@ public final class Const {
     // Ball-related constants
     public final static int		BALL_RADIUS = 18;
     public final static double	        BALL_MAX_ACCELERATION = 400.0;
-    public final static double	        BALL_MAX_SPEED = 370.0;
+    public final static double	        BALL_MAX_SPEED = 300.0;
     public final static double	        BALL_FRICTION = 0.992;
     public final static Color    	BALL_COLOR = Color.WHITE;
 }

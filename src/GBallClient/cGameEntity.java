@@ -26,6 +26,7 @@ public abstract class cGameEntity implements Serializable{
     public boolean m_colliding;
     private Vector2D m_collisionPrediction;
     private Vector2D m_collisionDelta;
+    private double m_collisionDeadline;
  
     private double m_acceleration;	// Accelerates by multiplying this with m_direction
     private long   m_lastUpdateTime;
@@ -85,7 +86,10 @@ public abstract class cGameEntity implements Serializable{
 		
 		//TODO Get this to turn off better. Like a deadline or something
 		if (m_colliding) {
-			m_position.add(m_collisionDelta.multiplyOperator(delta));
+			if (m_collisionDeadline >= System.currentTimeMillis())
+				m_position.add(m_collisionDelta.multiplyOperator(delta));
+			else
+				m_colliding = false;
 		}
 		
 			
@@ -115,8 +119,8 @@ public abstract class cGameEntity implements Serializable{
 			scaleSpeed(Const.SHIP_TURN_BRAKE_SCALE);
 		}
     	
+    	
     	//Predict Speed
-
 		m_targetSpeed = speed;
     	if(m_acceleration > 0) {
 		    m_targetSpeed.add(m_targetDirection.multiplyOperator(m_acceleration * (age + Const.INTERPOLATION_TIME) / (double) 1000));	// Adds acceleration in the future direction
@@ -147,52 +151,59 @@ public abstract class cGameEntity implements Serializable{
     	
     	m_targetPosition.add(avgDirection.multiplyOperator(m_acceleration * Math.pow(((age + Const.INTERPOLATION_TIME) / (double) 1000), 2.0) / 2.0));
     	
+    	
     	//Predict wall collisions
     	
-    	if (!m_colliding) {
-	    	
-	    	double newX = m_targetPosition.getX();
-			double newY = m_targetPosition.getY();
-			double radius = getRadius();
-	
-			if (newX + radius > (Const.DISPLAY_WIDTH - Const.WINDOW_BORDER_WIDTH)) {
-				m_targetPosition.set(Const.DISPLAY_WIDTH - radius - Const.WINDOW_BORDER_WIDTH - ((newX + radius) - (Const.DISPLAY_WIDTH + Const.WINDOW_BORDER_WIDTH)), m_targetPosition.getY());
+    	
+    	double newX = m_targetPosition.getX();
+		double newY = m_targetPosition.getY();
+		double radius = getRadius();
+
+		if (newX + radius > (Const.DISPLAY_WIDTH - Const.WINDOW_BORDER_WIDTH)) {
+			m_targetPosition.set(Const.DISPLAY_WIDTH - radius - Const.WINDOW_BORDER_WIDTH - ((newX + radius) - (Const.DISPLAY_WIDTH + Const.WINDOW_BORDER_WIDTH)), m_targetPosition.getY());
+			if (!m_colliding) {	
 				newX = Const.DISPLAY_WIDTH - radius - Const.WINDOW_BORDER_WIDTH;
 				m_colliding = true;
-			} else if ((newX - getRadius()) < Const.WINDOW_BORDER_WIDTH) {
-				m_targetPosition.set(- newX + radius + Const.WINDOW_BORDER_WIDTH, m_targetPosition.getY());
+				m_collisionDeadline = System.currentTimeMillis() + (Const.INTERPOLATION_TIME );
+			}
+		} else if ((newX - getRadius()) < Const.WINDOW_BORDER_WIDTH) {
+			m_targetPosition.set(- newX + radius + Const.WINDOW_BORDER_WIDTH, m_targetPosition.getY());
+			
+			if (!m_colliding) {
 				newX = radius + Const.WINDOW_BORDER_WIDTH;
 				m_colliding = true;
+				m_collisionDeadline = System.currentTimeMillis() + (Const.INTERPOLATION_TIME );
 			}
-	
-			if (newY + radius > (Const.DISPLAY_HEIGHT - Const.WINDOW_BOTTOM_HEIGHT)) {
-				m_targetPosition.set(m_targetPosition.getX(), Const.DISPLAY_HEIGHT - radius - Const.WINDOW_BOTTOM_HEIGHT - ((newY + radius) - (Const.DISPLAY_HEIGHT + Const.WINDOW_BOTTOM_HEIGHT)));
+		}
+
+		if (newY + radius > (Const.DISPLAY_HEIGHT - Const.WINDOW_BOTTOM_HEIGHT)) {
+			m_targetPosition.set(m_targetPosition.getX(), Const.DISPLAY_HEIGHT - radius - Const.WINDOW_BOTTOM_HEIGHT - ((newY + radius) - (Const.DISPLAY_HEIGHT + Const.WINDOW_BOTTOM_HEIGHT)));
+			if (!m_colliding) {
 				newY = Const.DISPLAY_HEIGHT - radius - Const.WINDOW_BOTTOM_HEIGHT;
 				m_colliding = true;
-			} else if (newY - radius < Const.WINDOW_TOP_HEIGHT) {
-				m_targetPosition.set(m_targetPosition.getX(), - newY + radius + Const.WINDOW_BOTTOM_HEIGHT);
+				m_collisionDeadline = System.currentTimeMillis() + (Const.INTERPOLATION_TIME );
+			}
+		} else if (newY - radius < Const.WINDOW_TOP_HEIGHT) {
+			m_targetPosition.set(m_targetPosition.getX(), - newY + radius + Const.WINDOW_BOTTOM_HEIGHT);
+			if (!m_colliding) {
 				newY = radius + Const.WINDOW_TOP_HEIGHT;
 				m_colliding = true;
+				m_collisionDeadline = System.currentTimeMillis() + (Const.INTERPOLATION_TIME );
 			}
-			
-	
+		}
+		
+
+		if (!m_colliding) {
 			m_collisionPrediction.set(newX, newY);
 			
 			m_collisionDelta = m_collisionPrediction;
 			m_collisionDelta.subtract(m_position);
 			m_collisionDelta.scale(1000.0 / Const.INTERPOLATION_TIME);
+		}
 
 	
-    	}
     	
     	m_interpolationDeadline = System.currentTimeMillis() + (long) Const.INTERPOLATION_TIME;
-    	
-    	//Temp test
-    	/*
-    	setSpeed(m_targetSpeed);
-    	setDirection(m_targetDirection);
-    	setPosition(m_targetPosition.getX(), m_targetPosition.getY());
-    	*/
     	
     	
     	//Speed at which to move to get into position after the interpolation time
@@ -209,9 +220,18 @@ public abstract class cGameEntity implements Serializable{
     	rad2 = Math.atan2(m_direction.getY(), m_direction.getX());
     	
     	m_deltaDirection = rad1 - rad2;
+    	
+    	//If the spin is more than half a rotation, spin the other way.
+    	if (m_deltaDirection < - Math.PI) 
+    		m_deltaDirection += (Math.PI * 2);
+    	
+    	if (m_deltaDirection > Math.PI)
+    		m_deltaDirection -= (Math.PI * 2);
+    		
+    	
     	m_deltaDirection /= ((Const.INTERPOLATION_TIME) / Const.FRAME_INCREMENT);
     	
-    	//TODO Do this with speed
+    	//TODO Do this with speed *not active*
     	m_deltaSpeed = speed;
     	m_deltaSpeed.add(m_targetSpeed);
     	m_deltaSpeed.scale(0.5);

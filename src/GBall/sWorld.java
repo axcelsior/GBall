@@ -16,6 +16,8 @@ import java.util.Hashtable;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Semaphore;
 
+import javax.swing.JOptionPane;
+
 import Shared.Const;
 import Shared.KeyMessageData;
 import Shared.MsgData;
@@ -25,7 +27,7 @@ public class sWorld {
 
 	public static final String SERVERIP = "127.0.0.1"; // 'Within' the emulator!
 														// TODO fix
-	public static final int SERVERPORT = 25025;
+	public static final int SERVERPORT = Integer.parseInt(JOptionPane.showInputDialog(null, "ServerPort", "Enter ServerPort", JOptionPane.QUESTION_MESSAGE));
 	private DatagramSocket m_socket;
 	private ClientListener m_clientListener;
 	private StringListener m_stringListener;
