@@ -10,19 +10,13 @@ import java.io.ObjectOutputStream;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
-import java.net.Socket;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
-import java.util.Hashtable;
-import java.util.PriorityQueue;
-import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import javax.swing.JOptionPane;
-import javax.xml.crypto.dsig.keyinfo.PGPData;
 
-import GBall.sWorld.ClientListener;
 import Shared.Const;
 import Shared.KeyMessageData;
 import Shared.MsgData;
@@ -31,6 +25,7 @@ import Shared.Vector2D;
 
 public class cWorld {
 
+	//ServerIP and port set on startup
 	public static final String SERVERIP = JOptionPane.showInputDialog(null, "ServerIP", "Enter ServerIP", JOptionPane.QUESTION_MESSAGE); // 'Within' the emulator!
 	public static final int SERVERPORT = Integer.parseInt(JOptionPane.showInputDialog(null, "ServerPort", "Enter ServerPort", JOptionPane.QUESTION_MESSAGE));
 
@@ -47,6 +42,7 @@ public class cWorld {
 
 	private final cGameWindow m_gameWindow = new cGameWindow();
 
+	// Network variables
 	private DatagramSocket m_socket;
 	private ServerListener m_serverListener;
 	private LagSender m_lagSender;
@@ -55,6 +51,7 @@ public class cWorld {
 
 	private cWorld() {
 
+		//Initialize the server address to allow hostnames to be given
 		try {
 			m_serverAddress = InetAddress.getByName(SERVERIP);
 		} catch (UnknownHostException e) {
@@ -66,6 +63,8 @@ public class cWorld {
 	}
 
 	public void process() {
+		
+		//Initialize the socket
 		try {
 			m_socket = new DatagramSocket();
 			m_socket.setSoTimeout(200);
@@ -86,8 +85,7 @@ public class cWorld {
 				updateTimer++;
 				m_gameWindow.repaint();
 			}
-			if (updateTimer > 1) {
-				// System.out.println("Sending gamestate to clients.");
+			if (updateTimer > 1) {		//Sends current keystates to server. Frequency set by if statement, 1 for every frame, 2 for every other frame etc
 				m_serverListener.sendPlayerState();
 				updateTimer = 0;
 			}
@@ -105,7 +103,7 @@ public class cWorld {
 			}
 			m_actualFps = 1000 / delta;
 		}
-		else //busy wait fixed
+		else //Sleep for remaining time to avoid busy wait
 		{
 
 			try {
@@ -127,13 +125,13 @@ public class cWorld {
 
 	private void initPlayers() {
 		System.out.println("Sending handshake");
-		int id = -1;
+		int id = -1;	//Initialized as illegal ID
 
 		// Handshake
 
-		id = sendMessage("handshake");
+		id = sendMessage("handshake");	//SendMessage will return the ID sent from server
 
-		// Ship creating
+		// Ship creating, replacing the correct ship with a player ship.
 
 		// Team 1
 		if (id == 0) {
@@ -191,9 +189,9 @@ public class cWorld {
 			System.exit(-1);
 		}
 		
-		//Initiate with about 80ms (one way)
+		//Initiate with half ping (one way)
 		m_lagSender = new LagSender(m_ping / 2.0);
-		m_serverListener = new ServerListener(m_serverAddress, SERVERPORT);
+		m_serverListener = new ServerListener(m_serverAddress, SERVERPORT);	//Server listener is its own thread and listen to gamestate updates.
 
 	}
 	
@@ -202,7 +200,8 @@ public class cWorld {
 		private Double lag;
 		ConcurrentLinkedQueue<DatagramPacket> q = new ConcurrentLinkedQueue<DatagramPacket>();
 		ConcurrentLinkedQueue<Double> doubleQ = new ConcurrentLinkedQueue<Double>();
-		
+		// The above linked queues should be treated as one, the first packet in q have the timestamp of the first packet in doubleQ etc.
+
 		public LagSender (Double miliseconds){
 			lag = miliseconds;
 			this.start();
@@ -211,6 +210,7 @@ public class cWorld {
 		public void run(){
 			while (true) {
 				
+				// Sleep if the queues are empty, to avoid busy wait.
 				if ((doubleQ.peek() == null)) {
 					
 					try {
@@ -223,6 +223,7 @@ public class cWorld {
 					continue;
 				}
 				
+				// If the first packet is not yet ready to be sent we sleep until it is
 				if (doubleQ.peek() > System.currentTimeMillis()) {
 					try {
 						Thread.sleep((long) (doubleQ.peek() - System.currentTimeMillis()));
@@ -233,6 +234,7 @@ public class cWorld {
 					}
 				}
 				
+				// Even if we slept or not, remove the timestamp and then send the message.
 				doubleQ.poll();
 				
 				try {
@@ -248,15 +250,18 @@ public class cWorld {
 			}
 		}
 		
+		// This is called from another thread (hence concurrent queues) to add packets to the queue and give them a timestamp.
 		public void sendMessage(DatagramPacket packet){
-			q.add(packet);
+			q.add(packet);									//Add the packet first! Otherwise the thread doing run() could see the timestamp and try to send the packet before it has been added.
 			doubleQ.add(System.currentTimeMillis() + lag);
 		}
 	}
 
+	//Used for handshake and start to lock main thread here untill server acknowledge
 	private int sendMessage(String message) {
 		boolean acknowledged = false;
 
+		//Send the message
 		while (!acknowledged) {
 			byte[] buf = new byte[16];
 			buf = message.getBytes();
@@ -274,10 +279,11 @@ public class cWorld {
 			byte[] rdBuf = new byte[16];
 			DatagramPacket t = new DatagramPacket(rdBuf, rdBuf.length);
 
+			//And wait for response
 			System.out.println("Waiting for response");
 			try {
 				m_socket.receive(t);
-			} catch (SocketTimeoutException e) {
+			} catch (SocketTimeoutException e) {	//Restart the loop if socket times out
 				continue;
 			} catch (IOException e) {
 				System.err.println("Error: IOException while recieving response");
@@ -292,14 +298,14 @@ public class cWorld {
 
 			if (rmsg.startsWith(message)) {
 				acknowledged = true;
-				if (rsplit[0].equals("handshake")) {
+				if (rsplit[0].equals("handshake")) {	//Find ID if expected
 					return Integer.parseInt(rsplit[1]);
 				}
 			}
 
 		}
 		System.out.print("No ID received");
-		return -1;
+		return -1;	//Return -1 if not
 	}
 
 	public double getActualFps() {
@@ -311,6 +317,8 @@ public class cWorld {
 		m_gameWindow.addKeyListener(k);
 	}
 
+	
+	// The object listener, listening for gamestate updates
 	public class ServerListener extends Thread {
 
 		private InetAddress m_IP;
@@ -320,6 +328,7 @@ public class cWorld {
 			m_IP = IP;
 			m_port = port;
 
+			// Disable timeout
 			try {
 				m_socket.setSoTimeout(0);
 			} catch (SocketException e) {
@@ -335,17 +344,16 @@ public class cWorld {
 			KeyMessageData state = cEntityManager.getInstance().getPlayerState();
 			byte[] data = new byte[1024];
 			data = Serialize(state);
-			//System.out.println("Sending data from client");
 			DatagramPacket p = new DatagramPacket(data, data.length, m_IP, m_port);
 
 			
 			// Call the LagSender to send it
 			m_lagSender.sendMessage(p);
 			
+			// Or send it directly
 			/*try {
 				m_socket.send(p);
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}*/
 
@@ -366,10 +374,9 @@ public class cWorld {
 					e.printStackTrace();
 					System.exit(-1);
 				}
-				data = Deserialize(p.getData());
+				data = Deserialize(p.getData());	//Deserialize received data
 				
-				//System.out.println("Received: " + data.m_ID + "id. " + data.m_position.getX() + ", " + data.m_position.getY() + "pos.");
-
+				//Pass the information on to the entity manager and scorekeeper
 				cEntityManager.getInstance().updateShipData(data, m_ping);
 				ScoreKeeper.getInstance().setScores(data.m_team1Score, data.m_team2Score);
 
@@ -377,6 +384,7 @@ public class cWorld {
 
 		}
 
+		// Serialize KeyMessageData to a byte array
 		private byte[] Serialize(KeyMessageData data) {
 
 			ByteArrayOutputStream bos = new ByteArrayOutputStream();
@@ -397,6 +405,7 @@ public class cWorld {
 			return buf;
 		}
 
+		// Deserialize game state updates from byte arrays
 		private MsgData Deserialize(byte[] byt) {
 			MsgData r = null;
 			ByteArrayInputStream BaIs /* hehe */ = new ByteArrayInputStream(byt);
@@ -405,17 +414,14 @@ public class cWorld {
 			try {
 				ois = new ObjectInputStream(BaIs);
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 
 			try {
 				r = (MsgData) ois.readObject();
 			} catch (ClassNotFoundException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 

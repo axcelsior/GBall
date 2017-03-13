@@ -84,7 +84,7 @@ public abstract class cGameEntity implements Serializable{
 		else scaleSpeed(m_friction);
 		
 		
-		//TODO Get this to turn off better. Like a deadline or something
+		// This is true if an edge collision has been predicted, then we should move towards the collision point before moving towards the predicted future position
 		if (m_colliding) {
 			if (m_collisionDeadline >= System.currentTimeMillis())
 				m_position.add(m_collisionDelta.multiplyOperator(delta));
@@ -92,7 +92,9 @@ public abstract class cGameEntity implements Serializable{
 				m_colliding = false;
 		}
 		
-			
+		// This is true if we are currently adjusting ship position, this is done with variable beyond regular speed
+		// allowing us to go beyond the speed limit if an object needs to catch up.
+		// It is not moved towards the position itself but a direction that pointed towards the position when the prediction was made. More below
 		if (m_interpolationDeadline >= System.currentTimeMillis()) {
 			if (!m_colliding)
 				m_position.add(m_deltaPosition.multiplyOperator(delta));
@@ -107,7 +109,7 @@ public abstract class cGameEntity implements Serializable{
 		m_lastUpdateTime = currentTime;
     }
         
-    public void delayedUpdate(double ping, Vector2D speed, Vector2D position, Vector2D direction, boolean breaking) {
+    public void delayedUpdate(double ping, Vector2D speed, Vector2D position, Vector2D direction, boolean braking) {
     	
     	double age = ping / 2.0;
     	
@@ -122,17 +124,17 @@ public abstract class cGameEntity implements Serializable{
     	
     	//Predict Speed
 		m_targetSpeed = speed;
-    	if(m_acceleration > 0) {
-		    m_targetSpeed.add(m_targetDirection.multiplyOperator(m_acceleration * (age + Const.INTERPOLATION_TIME) / (double) 1000));	// Adds acceleration in the future direction
+    	if(m_acceleration > 0) {		// Adds acceleration in the future direction
+		    m_targetSpeed.add(m_targetDirection.multiplyOperator(m_acceleration * (age + Const.INTERPOLATION_TIME) / (double) 1000));	
 		    if(m_targetSpeed.length() > m_maxSpeed) {
 			    m_targetSpeed.setLength(m_maxSpeed);
 			}
 		}
-    	else if (breaking) {
-			//Friction when breaking
+    	else if (braking) {
+			//Adjust for friction while braking
 			m_targetSpeed.scale(Math.pow(Const.SHIP_BRAKE_SCALE, (age + Const.INTERPOLATION_TIME) / Const.FRAME_INCREMENT));
 		} else {
-			//Friction when not accelerating
+			//Adjust for friction while not accelerating
 			m_targetSpeed.scale(Math.pow(Const.BALL_FRICTION, (age + Const.INTERPOLATION_TIME) / Const.FRAME_INCREMENT));
 		}
     	
@@ -142,13 +144,18 @@ public abstract class cGameEntity implements Serializable{
     	avgSpeed.add(m_targetSpeed);
     	avgSpeed.scale(0.5);
     	
+    	
     	Vector2D avgDirection = m_targetDirection;
     	avgDirection.add(direction);
     	avgDirection.scale(0.5);
     	avgDirection.setLength(1);
     	
+    	// P = P0 + V0*t + (a(t^2)/2)
+    	// The above formula is modified to account for change direction
+    	//The new position should be the average speed(direction included here) over the time to get there in seconds
     	m_targetPosition.add(avgSpeed.multiplyOperator((age + Const.INTERPOLATION_TIME) / (double) 1000));
     	
+    	//This accounts for accelleration
     	m_targetPosition.add(avgDirection.multiplyOperator(m_acceleration * Math.pow(((age + Const.INTERPOLATION_TIME) / (double) 1000), 2.0) / 2.0));
     	
     	
@@ -160,12 +167,13 @@ public abstract class cGameEntity implements Serializable{
 		double radius = getRadius();
 
 		if (newX + radius > (Const.DISPLAY_WIDTH - Const.WINDOW_BORDER_WIDTH)) {
+			//This is the predicted position after the collision
 			m_targetPosition.set(Const.DISPLAY_WIDTH - radius - Const.WINDOW_BORDER_WIDTH - ((newX + radius) - (Const.DISPLAY_WIDTH + Const.WINDOW_BORDER_WIDTH)), m_targetPosition.getY());
 			if (!m_colliding) {	
-				newX = Const.DISPLAY_WIDTH - radius - Const.WINDOW_BORDER_WIDTH;
+				newX = Const.DISPLAY_WIDTH - radius - Const.WINDOW_BORDER_WIDTH;	//Sets collision position along with bool and timestamp.
 				m_colliding = true;
 				m_collisionDeadline = System.currentTimeMillis() + (Const.INTERPOLATION_TIME );
-			}
+			}	//Same for the other 3 walls
 		} else if ((newX - getRadius()) < Const.WINDOW_BORDER_WIDTH) {
 			m_targetPosition.set(- newX + radius + Const.WINDOW_BORDER_WIDTH, m_targetPosition.getY());
 			
@@ -193,6 +201,7 @@ public abstract class cGameEntity implements Serializable{
 		}
 		
 
+		// When a collision is detected prediction stops until it collides.
 		if (!m_colliding) {
 			m_collisionPrediction.set(newX, newY);
 			
@@ -235,9 +244,7 @@ public abstract class cGameEntity implements Serializable{
     	m_deltaSpeed = speed;
     	m_deltaSpeed.add(m_targetSpeed);
     	m_deltaSpeed.scale(0.5);
-    	
-    	//System.out.println("Predicting\nSpeed: " + m_targetSpeed.length() + "\nDirection x=" + m_targetDirection.getX() + " y=" + m_targetDirection.getY() + "\nPosition x=" + m_targetPosition.getX() + " y=" + m_targetPosition.getY() + "\niSpeed x=" + m_iSpeed.getX() + " y=" + m_iSpeed.getY());
-    	
+    	 	
     	
     }
 

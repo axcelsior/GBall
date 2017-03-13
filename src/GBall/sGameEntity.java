@@ -22,8 +22,6 @@ public abstract class sGameEntity implements Serializable {
 	protected final Vector2D m_direction; // Should always be unit vector;
 										// determines the object's facing
 	
-	
-    private long m_interpolationDeadline = 0;
 
 	protected double m_acceleration; // Accelerates by multiplying this with
 									// m_direction

@@ -26,6 +26,7 @@ public class cShip extends cGameEntity{
 		m_ID = ID;
 	}
 
+	//Changed to properly show rotation when multiple keys are down
 	public void updateKeys() {
 		int tmpRotation = 0;
 		

@@ -50,7 +50,6 @@ public class sEntityManager {
     		if (e instanceof sShip){
     			if (((sShip) e).getID() == ID){
     				((sShip) e).setKeys(keyStates);
-    				//((sShip) e).delayedUpdate(ping); DONT!
     				break;
     			}
     		}

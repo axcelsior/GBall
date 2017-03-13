@@ -40,7 +40,7 @@ public final class Const {
     public final static double		BALL_Y = DISPLAY_HEIGHT / 2;     
     
     public final static double		INTERPOLATION_TIME = 100;	//Time taken to interpolate to target state
-    public final static double 		PING = 80;
+    public final static double 		PING = 80;					//Roundtime trip for atrifical lag
     
 
     // Ship-related constants

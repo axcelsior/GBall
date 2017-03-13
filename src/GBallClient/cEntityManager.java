@@ -53,13 +53,14 @@ public class cEntityManager {
 		}
 	}
 
+	// Updates ship data depending on type
 	public void updateShipData(MsgData data, double ping) {
 
 		for (ListIterator<cGameEntity> itr = m_entities.listIterator(0); itr.hasNext();) {
 			cGameEntity e = itr.next();
 			if (e instanceof cShip) {
 				if (((cShip) e).getID() == data.m_ID) {
-					// Update Keys
+					// Update Keys for all ships but the player ship
 					((cShip) e).setKeys(data.m_keyState);
 					((cShip) e).delayedUpdate(ping, data.m_speed, data.m_position, data.m_direction, data.m_keyState.brakeKey);
 					break;
